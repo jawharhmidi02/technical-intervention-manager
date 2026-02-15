@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,23 +14,33 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { signIn } from "../api/auth.api";
-import { SignInFormData } from "../types/auth.types";
+import { SignInFormData, signInSchema } from "../types/auth.types";
 
 export function SignInForm() {
   const router = useRouter();
-  const [form, setForm] = useState<SignInFormData>({
-    email: "",
-    password: "",
-    role: "technician",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      role: "technician",
+    },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const response = await signIn(form);
-    if (response) {
-      localStorage.setItem("accessToken", response.accessToken);
-      localStorage.setItem("user", JSON.stringify(response.user));
-      router.push("/technicien/dashboard");
+  const onSubmit = async (data: SignInFormData) => {
+    try {
+      const response = await signIn(data);
+      if (response) {
+        localStorage.setItem("accessToken", response.accessToken);
+        localStorage.setItem("user", JSON.stringify(response.user));
+        router.push("/technicien/dashboard");
+      }
+    } catch (error) {
+      console.error("Sign in error:", error);
     }
   };
 
@@ -40,21 +51,33 @@ export function SignInForm() {
         <CardDescription>Sign in to your technicien account</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-          <Button type="submit" className="w-full">
-            Sign In
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-4"
+          noValidate
+        >
+          <div className="flex flex-col gap-2">
+            <Input type="email" placeholder="Email" {...register("email")} />
+            {errors.email && (
+              <span className="text-sm text-red-500">
+                {errors.email.message}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Input
+              type="password"
+              placeholder="Password"
+              {...register("password")}
+            />
+            {errors.password && (
+              <span className="text-sm text-red-500">
+                {errors.password.message}
+              </span>
+            )}
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Sign In"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}

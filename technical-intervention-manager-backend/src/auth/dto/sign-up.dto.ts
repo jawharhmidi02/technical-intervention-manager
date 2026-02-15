@@ -3,7 +3,7 @@ import {
   IsEnum,
   IsNotEmpty,
   IsOptional,
-  MinLength,
+  IsString,
 } from 'class-validator';
 import { Role } from '../enums/role.enum';
 
@@ -14,7 +14,8 @@ export class SignUpDto {
   @IsEmail()
   email: string;
 
-  @MinLength(6)
+  @IsNotEmpty()
+  @IsString()
   password: string;
 
   @IsOptional()

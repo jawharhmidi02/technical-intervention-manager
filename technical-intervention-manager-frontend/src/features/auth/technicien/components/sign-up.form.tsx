@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,21 +14,39 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { signUp } from "../api/auth.api";
-import { SignUpFormData } from "../types/auth.types";
+import { SignUpFormData, signUpSchema } from "../types/auth.types";
 
 export function SignUpForm() {
   const router = useRouter();
-  const [form, setForm] = useState<SignUpFormData>({
-    name: "",
-    email: "",
-    password: "",
-    role: "technician",
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      role: "technician",
+    },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await signUp(form);
-    router.push("/technicien");
+  const onSubmit = async (data: SignUpFormData) => {
+    try {
+      await signUp(data);
+      router.push("/technicien");
+    } catch (error: any) {
+      if (error.response && error.response.status === 409) {
+        setError("email", {
+          type: "manual",
+          message: "Email already exists",
+        });
+      } else {
+        console.error("Sign up error:", error);
+      }
+    }
   };
 
   return (
@@ -37,26 +56,41 @@ export function SignUpForm() {
         <CardDescription>Create your technicien account</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input
-            placeholder="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <Input
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-          <Button type="submit" className="w-full">
-            Sign Up
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-4"
+          noValidate
+        >
+          <div className="flex flex-col gap-2">
+            <Input placeholder="Name" {...register("name")} />
+            {errors.name && (
+              <span className="text-sm text-red-500">
+                {errors.name.message}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Input type="email" placeholder="Email" {...register("email")} />
+            {errors.email && (
+              <span className="text-sm text-red-500">
+                {errors.email.message}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Input
+              type="password"
+              placeholder="Password"
+              {...register("password")}
+            />
+            {errors.password && (
+              <span className="text-sm text-red-500">
+                {errors.password.message}
+              </span>
+            )}
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Signing up..." : "Sign Up"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
